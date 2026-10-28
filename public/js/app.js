@@ -567,7 +567,7 @@ async function renderHome() {
   const aboutHtml = aboutPars.length
     ? aboutPars.map((p, i) => `<p${i === 0 ? ' class="lead"' : ""}>${esc(p)}</p>`).join("")
     : `<p class="lead">Tu pojawi się mój opis — uzupełnisz go w panelu (Ustawienia).</p>`;
-  const featured = s.featured.slice(0, 6);
+  const featured = s.featured.slice(0, 12);
   const post = s.posts[0];
   const albums = s.albums.filter((a) => a.featured).concat(s.albums).slice(0, 3);
   const featCells = featured.map((p, i) => {

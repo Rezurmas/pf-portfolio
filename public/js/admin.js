@@ -21,6 +21,7 @@
     featuredIds: [],
     featSaved: null,
     featSizes: {},
+    featFilter: "",
     section: "dash",
     editing: { album: null, post: null },
   };
@@ -434,13 +435,6 @@
   function viewFeatured() {
     const sel = A.featuredIds || [];
     const dirty = featSnap() !== (A.featSaved ?? JSON.stringify({ ids: [], sizes: {} }));
-    const cell = (p, idx) => {
-      const pos = A.featuredIds.indexOf(p.id);
-      return `<div class="a-photo ${pos >= 0 ? "feat-sel" : ""}" data-feat-pid="${p.id}">
-        ${pos >= 0 ? `<span class="cover-tag">${pos + 1}</span>` : ""}
-        <img src="${p.thumb}" alt="" loading="lazy">
-      </div>`;
-    };
     const selCells = sel.map((id) => {
       const p = (A.featPhotos || []).find((x) => x.id === id);
       if (!p) return "";
@@ -449,7 +443,9 @@
         <span class="cover-tag">${idx + 1}</span>
         <img src="${p.thumb}" alt="" loading="lazy">
         <div class="ov" style="opacity:1"><div class="ov-bot">
-          <button class="mini" data-feat-rm="${id}" title="Usuń z wyróżnionych">× USUŃ</button>
+          <button class="mini" data-feat-mv="${id}" data-dir="-1" ${idx > 0 ? "" : "disabled style=opacity:.3"} title="Przesuń w lewo">←</button>
+          <button class="mini" data-feat-mv="${id}" data-dir="1" ${idx < sel.length - 1 ? "" : "disabled style=opacity:.3"} title="Przesuń w prawo">→</button>
+          <button class="mini" data-feat-rm="${id}" title="Usuń z wyróżnionych">×</button>
         </div></div>
       </div>`;
     }).join("");
@@ -480,8 +476,50 @@
     <div id="feat-preview" style="max-width:760px">
       <div class="feature-grid" id="feat-preview-grid">${prevCells || '<div class="label">Nic nie wybrano.</div>'}</div>
     </div>
-    <div class="label" style="margin:2.4rem 0 1rem">Wszystkie zdjęcia — kliknij, aby dodać (numer = kolejność)</div>
-    <div class="a-photos" id="feat-all">${(A.featPhotos || []).map((p) => cell(p)).join("")}</div>`;
+    <div class="label" style="margin:2.4rem 0 1rem">Wszystkie zdjęcia — kliknij, aby dodać (numer = kolejność) / przeciągnij na pasek wyboru</div>
+    <div class="field" style="max-width:420px;margin-bottom:1.4rem">
+      <label for="feat-filter">Filtruj po tytule lub albumie</label>
+      <input id="feat-filter" type="text" placeholder="WPISZ…" autocomplete="off" value="${esc(A.featFilter || "")}">
+      <span class="bar"></span>
+    </div>
+    <div id="feat-all">${featAllHTML()}</div>`;
+  }
+
+  /* lista wszystkich zdjęć: grupowana po albumach, filtrowana, z "+ Dodaj album" */
+  function featAllHTML() {
+    const q = (A.featFilter || "").trim().toLowerCase();
+    const albumTitle = (slug) => {
+      const a = (A.albums || []).find((x) => x.slug === slug);
+      return a ? a.title : slug || "Bez albumu";
+    };
+    const groups = new Map();
+    (A.featPhotos || []).forEach((p) => {
+      const key = p.album_slug || "inne";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+    const cell = (p) => {
+      const pos = A.featuredIds.indexOf(p.id);
+      return `<div class="a-photo ${pos >= 0 ? "feat-sel" : ""}" data-feat-pid="${p.id}">
+        ${pos >= 0 ? `<span class="cover-tag">${pos + 1}</span>` : ""}
+        <img src="${p.thumb}" alt="" loading="lazy">
+      </div>`;
+    };
+    const out = [];
+    for (const [slug, photos] of groups) {
+      const title = albumTitle(slug);
+      const shown = photos.filter((p) =>
+        !q || (p.title || "").toLowerCase().includes(q) || title.toLowerCase().includes(q));
+      if (!shown.length) continue;
+      out.push(`
+      <div class="feat-group-head">
+        <span class="t">${esc(title)}</span>
+        <span class="s">${shown.length} ${plCount(shown.length, "zdjęcie", "zdjęcia", "zdjęć")}</span>
+        <button class="a-btn mini ghost" data-feat-add-album="${esc(slug)}" title="Dodaj wszystkie zdjęcia z tego albumu">+ Dodaj album</button>
+      </div>
+      <div class="a-photos feat-group-grid">${shown.map(cell).join("")}</div>`);
+    }
+    return out.join("") || `<div class="a-row"><span class="s">Brak zdjęć pasujących do filtra.</span></div>`;
   }
 
   function renderFeaturedPanes() {
@@ -492,6 +530,20 @@
 
   function bindFeatured() {
     $("#feat-all")?.addEventListener("click", (e) => {
+      const addAlbum = e.target.closest("[data-feat-add-album]");
+      if (addAlbum) {
+        const slug = addAlbum.dataset.featAddAlbum;
+        const ids = A.featPhotos.filter((p) => p.album_slug === slug).map((p) => p.id);
+        const sel = A.featuredIds || [];
+        let added = 0;
+        for (const id of ids) {
+          if (sel.includes(id) || sel.length >= 12) continue;
+          sel.push(id); added++;
+        }
+        toast(added ? `Dodano ${added} ${plCount(added, "zdjęcie", "zdjęcia", "zdjęć")}` : "Limit 12 lub album już wybrany", added ? "ok" : "err");
+        renderFeaturedPanes();
+        return;
+      }
       const c = e.target.closest("[data-feat-pid]");
       if (!c) return;
       const id = Number(c.dataset.featPid);
@@ -502,7 +554,23 @@
       else { toast("Maksymalnie 12 zdjęć", "err"); return; }
       renderFeaturedPanes();
     });
+    $("#feat-filter")?.addEventListener("input", (e) => {
+      A.featFilter = e.target.value;
+      const all = $("#feat-all");
+      if (all) all.innerHTML = featAllHTML();
+    });
     $("#feat-selected")?.addEventListener("click", (e) => {
+      const mv = e.target.closest("[data-feat-mv]");
+      if (mv) {
+        const sel = A.featuredIds || [];
+        const i = sel.indexOf(Number(mv.dataset.featMv));
+        const j = i + Number(mv.dataset.dir);
+        if (i >= 0 && j >= 0 && j < sel.length) {
+          [sel[i], sel[j]] = [sel[j], sel[i]];
+          renderFeaturedPanes();
+        }
+        return;
+      }
       const rm = e.target.closest("[data-feat-rm]");
       if (!rm) return;
       A.featuredIds = (A.featuredIds || []).filter((x) => x !== Number(rm.dataset.featRm));
@@ -515,12 +583,17 @@
       renderFeaturedPanes();
     });
     $("#feat-save")?.addEventListener("click", async () => {
+      const ids = A.featuredIds || [];
+      // blokada: pusta lista wyłącza całą sekcję na stronie głównej — wymagaj potwierdzenia
+      if (!ids.length) {
+        if (!confirm("Zapisujesz PUSTĄ sekcję „Wybrane prace” — zniknie ze strony głównej. Na pewno?")) return;
+      }
       try {
         const sizes = {};
         Object.entries(A.featSizes || {}).forEach(([k, v]) => { sizes[k] = v; });
         await api("/api/admin/featured", {
           method: "POST",
-          body: JSON.stringify({ ids: A.featuredIds || [], sizes }),
+          body: JSON.stringify({ ids, sizes }),
         });
         A.featSaved = featSnap();
         toast("Wybór zapisany — odśwież stronę główną");
@@ -528,6 +601,7 @@
       } catch (err) { toast(err.message, "err"); }
     });
     $("#feat-clear")?.addEventListener("click", () => {
+      if ((A.featuredIds || []).length && !confirm("Usunąć wszystkie zdjęcia z sekcji „Wybrane prace”?")) return;
       A.featuredIds = [];
       renderFeaturedPanes();
     });

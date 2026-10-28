@@ -46,7 +46,9 @@ body {
 }
 
 ::selection { background: #fff; color: #000; }
-img { display: block; max-width: 100%; }
+/* height:auto — neutralizuje presentational hint z atrybutu height (inaczej
+   szerokość z CSS + wysokość z atrybutu = rozciągnięte zdjęcia w galerii) */
+img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; font-weight: 700; background: none; border: none; color: inherit; }
 input, textarea, select { font-family: inherit; font-weight: 700; }
@@ -583,6 +585,12 @@ input::placeholder, textarea::placeholder { color: #555; }
 /* img nie przejmuje dragstarta — przeciąga się cała komórka */
 #feat-preview .fcell img, #feat-selected .a-photo img, #feat-all .a-photo img { pointer-events: none; }
 .a-photo .cover-tag { position: absolute; top: 0.5em; left: 0.5em; z-index: 2; background: #fff; color: #000; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; padding: 0.3em 0.55em; }
+
+/* grupy albumów w pickerze wyróżnionych */
+.feat-group-head { display: flex; align-items: center; gap: 1em; margin: 1.6rem 0 0.7rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); font-size: var(--fs-small); letter-spacing: 0.24em; text-transform: uppercase; }
+.feat-group-head .t { color: var(--fg); }
+.feat-group-head .s { color: var(--muted); flex: 1; }
+.feat-group-grid { margin-bottom: 0.4rem; }
 
 /* podgląd markdown */
 .md-preview { border: 1px solid var(--line); padding: 1.6rem; max-height: 420px; overflow-y: auto; background: #000; }
