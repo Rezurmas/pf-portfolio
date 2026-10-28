@@ -456,11 +456,11 @@
       if (!p) return "";
       const sz = A.featSizes[id] || defaultFeatSize(i, sel.length);
       const btn = (s, lbl, t) =>
-        `<button class="mini ${sz === s ? "on" : ""}" data-feat-size="${id}" data-sz="${s}" title="${t}">${lbl}</button>`;
+        `<button type="button" class="mini ${sz === s ? "on" : ""}" data-feat-size="${id}" data-sz="${s}" title="${t}">${lbl}</button>`;
       return `<div class="fcell ${sz}" data-feat-pid="${id}" draggable="true">
         <img src="${p.large}" alt="" loading="lazy">
         <div class="ov"><div class="ov-bot">
-          ${btn("std", "▢", "Kwadrat")}${btn("wide", "▬", "Szeroki (2 kolumny)")}${btn("full", "▭", "Panorama (cała szerokość)")}
+          ${btn("std", "▢ 1:1", "Kwadrat 1:1")}${btn("wide", "▬ 2:1", "Szeroki 2:1")}${btn("full", "▭ 3:1", "Panorama 3:1")}
         </div></div>
       </div>`;
     }).join("");
