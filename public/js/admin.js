@@ -491,6 +491,55 @@
       A.featuredIds = [];
       renderFeaturedPanes();
     });
+    bindFeaturedDnD();
+  }
+
+  /* drag & drop: przeciągnij zdjęcie do paska wyboru (trzęsie się jak na iPhone) */
+  function bindFeaturedDnD() {
+    const all = $("#feat-all"), strip = $("#feat-selected");
+    let dragId = null;
+    const onStart = (e) => {
+      const c = e.target.closest("[data-feat-pid]");
+      if (!c) return;
+      dragId = Number(c.dataset.featPid);
+      c.classList.add("drag-shake");
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(dragId));
+      }
+    };
+    const onEnd = () => {
+      $$(".a-photo.drag-shake").forEach((el) => el.classList.remove("drag-shake"));
+      strip?.classList.remove("drop-hint");
+      dragId = null;
+    };
+    all?.addEventListener("dragstart", onStart);
+    strip?.addEventListener("dragstart", onStart);
+    all?.addEventListener("dragend", onEnd);
+    strip?.addEventListener("dragend", onEnd);
+    strip?.addEventListener("dragover", (e) => {
+      if (dragId == null) return;
+      e.preventDefault();
+      strip.classList.add("drop-hint");
+    });
+    strip?.addEventListener("dragleave", () => strip.classList.remove("drop-hint"));
+    strip?.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (dragId == null) return;
+      const sel = A.featuredIds || [];
+      const from = sel.indexOf(dragId);
+      const target = e.target.closest("[data-feat-pid]");
+      let to = sel.length;
+      if (target) {
+        const ti = sel.indexOf(Number(target.dataset.featPid));
+        const r = target.getBoundingClientRect();
+        to = e.clientX < r.left + r.width / 2 ? ti : ti + 1;
+      }
+      if (from >= 0) sel.splice(from, 1);
+      else if (sel.length >= 12) { toast("Maksymalnie 12 zdjęć", "err"); renderFeaturedPanes(); return; }
+      sel.splice(Math.min(to, sel.length), 0, dragId);
+      renderFeaturedPanes();
+    });
   }
 
   async function loadFeatured() {

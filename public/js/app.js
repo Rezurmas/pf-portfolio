@@ -549,7 +549,7 @@ async function renderHome() {
     else if (i === 5) cls.push("full");
     else cls.push("std");
     return `<a class="${cls.join(" ")}" href="/portfolio/${p.album_slug}" data-link data-reveal="scale" data-cursor>
-      <img src="${p.thumb}" alt="${esc(p.title)}" loading="lazy">
+      <img src="${p.large}" alt="${esc(p.title)}" loading="lazy">
       <span class="fcap">${esc(p.title || "kadr")}</span></a>`;
   }).join("");
   return `

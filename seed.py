@@ -39,14 +39,14 @@ def add_photo(conn, album_id: int, src: Path, title: str = "", description: str 
     if img.mode not in ("RGB", "L"):
         img = img.convert("RGB")
     img.thumbnail((app.THUMB_SIZE, app.THUMB_SIZE))
-    img.save(tdir / name, "JPEG", quality=82)
+    img.save(tdir / name, "JPEG", quality=85)
 
     img2 = Image.open(dest)
     img2 = ImageOps.exif_transpose(img2)
     if img2.mode not in ("RGB", "L"):
         img2 = img2.convert("RGB")
     img2.thumbnail((app.LARGE_SIZE, app.LARGE_SIZE))
-    img2.save(ldir / name, "JPEG", quality=87)
+    img2.save(ldir / name, "JPEG", quality=90)
 
     pos = app.next_position(conn, "photos", "album_id = ?", (album_id,))
     cur = conn.execute(

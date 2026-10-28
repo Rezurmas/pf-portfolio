@@ -404,13 +404,13 @@ def save_upload(album_id: int, file: UploadFile) -> int | None:
         if img.mode not in ("RGB", "L"):
             img = img.convert("RGB")
         img.thumbnail((THUMB_SIZE, THUMB_SIZE))
-        img.save(thumb_dir / name, "JPEG", quality=82)
+        img.save(thumb_dir / name, "JPEG", quality=85)
         img2 = Image.open(dest)
         img2 = ImageOps.exif_transpose(img2)
         if img2.mode not in ("RGB", "L"):
             img2 = img2.convert("RGB")
         img2.thumbnail((LARGE_SIZE, LARGE_SIZE))
-        img2.save(large_dir / name, "JPEG", quality=87)
+        img2.save(large_dir / name, "JPEG", quality=90)
     except Exception:
         for p in (dest, thumb_dir / name, large_dir / name):
             p.unlink(missing_ok=True)
