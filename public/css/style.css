@@ -552,7 +552,7 @@ input, textarea, select { font-family: inherit; font-weight: 700; }
 #feat-selected .a-photo { flex: 0 0 96px; height: 96px; }
 #feat-selected .a-photo .ov-bot .mini { font-size: 0.6rem; }
 /* trzęsienie przeciąganego zdjęcia (jak na iPhone) */
-.a-photo.drag-shake { animation: featShake 0.35s ease-in-out infinite; z-index: 5; box-shadow: 0 0 0 2px #fff; }
+.a-photo.drag-shake, #feat-preview .fcell.drag-shake { animation: featShake 0.35s ease-in-out infinite; z-index: 5; box-shadow: 0 0 0 2px #fff; }
 @keyframes featShake {
   0% { transform: rotate(0deg) scale(1.04); }
   25% { transform: rotate(-2.5deg) scale(1.06); }
@@ -560,6 +560,15 @@ input, textarea, select { font-family: inherit; font-weight: 700; }
   75% { transform: rotate(-1.5deg) scale(1.05); }
   100% { transform: rotate(0deg) scale(1.04); }
 }
+/* podgląd sekcji wyróżnionych w panelu */
+#feat-preview-grid.drop-hint { outline: 2px dashed #fff; outline-offset: -2px; }
+#feat-preview .fcell { cursor: grab; position: relative; }
+#feat-preview .fcell .ov { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,.78), transparent 55%); display: flex; flex-direction: column; justify-content: flex-end; padding: 0.4em; }
+#feat-preview .ov-bot { display: flex; gap: 0.3em; }
+#feat-preview .ov-bot .mini { flex: 1; border: 1px solid rgba(255,255,255,.65); background: #000; color: #fff; padding: 0.3em 0.1em; font-size: 0.8rem; line-height: 1; text-align: center; white-space: nowrap; }
+#feat-preview .ov-bot .mini.on { background: #fff; color: #000; }
+/* img nie przejmuje dragstarta — przeciąga się cała komórka */
+#feat-preview .fcell img, #feat-selected .a-photo img, #feat-all .a-photo img { pointer-events: none; }
 .a-photo .cover-tag { position: absolute; top: 0.5em; left: 0.5em; z-index: 2; background: #fff; color: #000; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; padding: 0.3em 0.55em; }
 
 /* podgląd markdown */

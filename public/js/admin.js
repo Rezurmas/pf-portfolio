@@ -20,6 +20,7 @@
     featPhotos: [],
     featuredIds: [],
     featSaved: null,
+    featSizes: {},
     section: "dash",
     editing: { album: null, post: null },
     uploads: [],
@@ -420,9 +421,16 @@
   }
 
   /* ------------------------------------------- wyroznione -- */
+  const defaultFeatSize = (i, len) =>
+    len === 1 ? "full" : i === 0 || i === 1 ? "wide" : i === 5 ? "full" : "std";
+
+  function featSnap() {
+    return JSON.stringify({ ids: [...(A.featuredIds || [])], sizes: { ...(A.featSizes || {}) } });
+  }
+
   function viewFeatured() {
     const sel = A.featuredIds || [];
-    const dirty = JSON.stringify(sel) !== (A.featSaved ?? JSON.stringify([]));
+    const dirty = featSnap() !== (A.featSaved ?? JSON.stringify({ ids: [], sizes: {} }));
     const cell = (p, idx) => {
       const pos = A.featuredIds.indexOf(p.id);
       return `<div class="a-photo ${pos >= 0 ? "feat-sel" : ""}" data-feat-pid="${p.id}">
@@ -442,6 +450,20 @@
         </div></div>
       </div>`;
     }).join("");
+    /* podgląd sekcji — kopie tego, co pokazuje strona główna */
+    const prevCells = sel.map((id, i) => {
+      const p = (A.featPhotos || []).find((x) => x.id === id);
+      if (!p) return "";
+      const sz = A.featSizes[id] || defaultFeatSize(i, sel.length);
+      const btn = (s, lbl, t) =>
+        `<button class="mini ${sz === s ? "on" : ""}" data-feat-size="${id}" data-sz="${s}" title="${t}">${lbl}</button>`;
+      return `<div class="fcell ${sz}" data-feat-pid="${id}" draggable="true">
+        <img src="${p.large}" alt="" loading="lazy">
+        <div class="ov"><div class="ov-bot">
+          ${btn("std", "▢", "Kwadrat")}${btn("wide", "▬", "Szeroki (2 kolumny)")}${btn("full", "▭", "Panorama (cała szerokość)")}
+        </div></div>
+      </div>`;
+    }).join("");
     return `
     <div class="a-head"><h1>Wyróżnione — „Wybrane prace”</h1>
       <div style="display:flex;gap:.7rem;flex-wrap:wrap">
@@ -451,6 +473,10 @@
     </div>
     <div class="label" style="margin-bottom:1rem">Wybrane: ${sel.length} / 12 — kliknij, aby usunąć</div>
     <div class="a-photos" id="feat-selected">${selCells || '<div class="a-row" style="grid-column:1/-1"><span class="s">Nic nie wybrano.</span></div>'}</div>
+    <div class="label" style="margin:2.4rem 0 1rem">Podgląd sekcji (dokładnie tak wygląda na stronie głównej) — przeciągaj, by zmienić kolejność; przyciski na zdjęciu zmieniają rozmiar</div>
+    <div id="feat-preview" style="max-width:760px">
+      <div class="feature-grid" id="feat-preview-grid">${prevCells || '<div class="label">Nic nie wybrano.</div>'}</div>
+    </div>
     <div class="label" style="margin:2.4rem 0 1rem">Wszystkie zdjęcia — kliknij, aby dodać (numer = kolejność)</div>
     <div class="a-photos" id="feat-all">${(A.featPhotos || []).map((p) => cell(p)).join("")}</div>`;
   }
@@ -479,13 +505,21 @@
       A.featuredIds = (A.featuredIds || []).filter((x) => x !== Number(rm.dataset.featRm));
       renderFeaturedPanes();
     });
+    $("#feat-preview")?.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-feat-size]");
+      if (!b) return;
+      A.featSizes[Number(b.dataset.featSize)] = b.dataset.sz;
+      renderFeaturedPanes();
+    });
     $("#feat-save")?.addEventListener("click", async () => {
       try {
+        const sizes = {};
+        Object.entries(A.featSizes || {}).forEach(([k, v]) => { sizes[k] = v; });
         await api("/api/admin/featured", {
           method: "POST",
-          body: JSON.stringify({ ids: A.featuredIds || [] }),
+          body: JSON.stringify({ ids: A.featuredIds || [], sizes }),
         });
-        A.featSaved = JSON.stringify(A.featuredIds || []);
+        A.featSaved = featSnap();
         toast("Wybór zapisany — odśwież stronę główną");
         renderFeaturedPanes();
       } catch (err) { toast(err.message, "err"); }
@@ -497,9 +531,9 @@
     bindFeaturedDnD();
   }
 
-  /* drag & drop: przeciągnij zdjęcie do paska wyboru (trzęsie się jak na iPhone) */
+  /* drag & drop: przeciągnij zdjęcie do paska wyboru / w podglądzie (trzęsie się jak na iPhone) */
   function bindFeaturedDnD() {
-    const all = $("#feat-all"), strip = $("#feat-selected");
+    const all = $("#feat-all"), strip = $("#feat-selected"), prev = $("#feat-preview-grid");
     let dragId = null;
     const onStart = (e) => {
       const c = e.target.closest("[data-feat-pid]");
@@ -512,21 +546,12 @@
       }
     };
     const onEnd = () => {
-      $$(".a-photo.drag-shake").forEach((el) => el.classList.remove("drag-shake"));
+      $$(".a-photo.drag-shake, .fcell.drag-shake").forEach((el) => el.classList.remove("drag-shake"));
       strip?.classList.remove("drop-hint");
+      prev?.classList.remove("drop-hint");
       dragId = null;
     };
-    all?.addEventListener("dragstart", onStart);
-    strip?.addEventListener("dragstart", onStart);
-    all?.addEventListener("dragend", onEnd);
-    strip?.addEventListener("dragend", onEnd);
-    strip?.addEventListener("dragover", (e) => {
-      if (dragId == null) return;
-      e.preventDefault();
-      strip.classList.add("drop-hint");
-    });
-    strip?.addEventListener("dragleave", () => strip.classList.remove("drop-hint"));
-    strip?.addEventListener("drop", (e) => {
+    const applyDrop = (e, container) => {
       e.preventDefault();
       if (dragId == null) return;
       const sel = A.featuredIds || [];
@@ -542,7 +567,27 @@
       else if (sel.length >= 12) { toast("Maksymalnie 12 zdjęć", "err"); renderFeaturedPanes(); return; }
       sel.splice(Math.min(to, sel.length), 0, dragId);
       renderFeaturedPanes();
+    };
+    all?.addEventListener("dragstart", onStart);
+    strip?.addEventListener("dragstart", onStart);
+    prev?.addEventListener("dragstart", onStart);
+    all?.addEventListener("dragend", onEnd);
+    strip?.addEventListener("dragend", onEnd);
+    prev?.addEventListener("dragend", onEnd);
+    strip?.addEventListener("dragover", (e) => {
+      if (dragId == null) return;
+      e.preventDefault();
+      strip.classList.add("drop-hint");
     });
+    strip?.addEventListener("dragleave", () => strip.classList.remove("drop-hint"));
+    prev?.addEventListener("dragover", (e) => {
+      if (dragId == null) return;
+      e.preventDefault();
+      prev.classList.add("drop-hint");
+    });
+    prev?.addEventListener("dragleave", () => prev.classList.remove("drop-hint"));
+    strip?.addEventListener("drop", (e) => applyDrop(e, strip));
+    prev?.addEventListener("drop", (e) => applyDrop(e, prev));
   }
 
   async function loadFeatured() {
@@ -553,7 +598,9 @@
         .filter((p) => p.featured)
         .sort((a, b) => (a.feat_pos ?? 0) - (b.feat_pos ?? 0))
         .map((p) => p.id);
-      A.featSaved = JSON.stringify(A.featuredIds);
+      A.featSizes = {};
+      r.photos.forEach((p) => { if (p.feat_size) A.featSizes[p.id] = p.feat_size; });
+      A.featSaved = featSnap();
       const pane = $('[data-pane="featured"]');
       if (pane) pane.innerHTML = viewFeatured();
       bindFeatured();

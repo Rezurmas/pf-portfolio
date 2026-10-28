@@ -544,10 +544,8 @@ async function renderHome() {
   const albums = s.albums.filter((a) => a.featured).concat(s.albums).slice(0, 3);
   const featCells = featured.map((p, i) => {
     const cls = ["fcell"];
-    if (featured.length === 1) cls.push("full");
-    else if (i === 0 || i === 1) cls.push("wide");
-    else if (i === 5) cls.push("full");
-    else cls.push("std");
+    const sz = p.feat_size || (featured.length === 1 ? "full" : i === 0 || i === 1 ? "wide" : i === 5 ? "full" : "std");
+    cls.push(sz);
     return `<a class="${cls.join(" ")}" href="/portfolio/${p.album_slug}" data-link data-reveal="scale" data-cursor>
       <img src="${p.large}" alt="${esc(p.title)}" loading="lazy">
       <span class="fcap">${esc(p.title || "kadr")}</span></a>`;

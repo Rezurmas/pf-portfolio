@@ -220,6 +220,8 @@ def init_db() -> None:
         conn.execute("ALTER TABLE photos ADD COLUMN featured INTEGER DEFAULT 0")
     if "feat_pos" not in photo_cols:
         conn.execute("ALTER TABLE photos ADD COLUMN feat_pos INTEGER DEFAULT 0")
+    if "feat_size" not in photo_cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN feat_size TEXT DEFAULT ''")
     conn.commit()
     # jednorazowe wypełnienie: jeśli nic nie wyróżnione, weź pierwsze zdjęcia
     # z wyróżnionych albumów (kolejność: albumy → zdjęcia)
@@ -896,15 +898,20 @@ def admin_featured(request: Request):
 
 @app.post("/api/admin/featured")
 async def admin_set_featured(request: Request):
-    """Ustaw dokładną listę i kolejność wyróżnionych zdjęć (max 12)."""
+    """Ustaw listę, kolejność i rozmiary wyróżnionych zdjęć (max 12)."""
     require_admin(request)
     body = await request.json()
     ids = [int(x) for x in body.get("ids", [])][:12]
+    sizes = body.get("sizes", {}) or {}
     conn = db()
-    conn.execute("UPDATE photos SET featured = 0, feat_pos = 0")
+    conn.execute("UPDATE photos SET featured = 0, feat_pos = 0, feat_size = ''")
     for i, pid in enumerate(ids):
+        size = str(sizes.get(str(pid), "")).strip()
+        if size not in ("wide", "std", "full"):
+            size = ""
         conn.execute(
-            "UPDATE photos SET featured = 1, feat_pos = ? WHERE id = ?", (i, pid)
+            "UPDATE photos SET featured = 1, feat_pos = ?, feat_size = ? WHERE id = ?",
+            (i, size, pid),
         )
     conn.commit()
     conn.close()
