@@ -54,8 +54,8 @@
     <div class="admin-shell">
       <aside class="a-side">
         <div class="a-side-head">
-          <span class="t">Panel / Admin</span>
-          <span class="t" style="color:#777">PF</span>
+          <span class="t">Dawid / Foto</span>
+          <span class="t" style="color:#777">Panel</span>
         </div>
         <nav class="a-nav">
           ${navItem("dash", "Pulpit")}

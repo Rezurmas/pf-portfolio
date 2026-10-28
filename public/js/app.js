@@ -313,6 +313,8 @@ function afterRender(path) {
   initParallax();
   if (path === "/" || path === "") splitHeroTitle();
   if (path === "/kontakt") initContactForm();
+  // w panelu chowamy nagłówek strony — sidebar ma własną główkę, zero nakładania
+  $("#site-header").style.display = path === "/admin" ? "none" : "";
   scrollTo(0, 0);
   if (path !== "/admin") {
     $("#site-footer").hidden = false;
