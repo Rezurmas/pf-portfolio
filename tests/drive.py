@@ -210,6 +210,18 @@ async def main() -> None:
             )
         ok_panel = await wait_js("document.querySelector('.admin-shell') !== null", label="panel po zalogowaniu")
         if ok_panel:
+            # sprzątanie własnych testowych wiadomości (nie zostawiamy śmieci w bazie)
+            await ev(
+                "fetch('/api/me', {credentials:'same-origin'}).then(r=>r.json())"
+                ".then(async (m) => {"
+                "  const list = await fetch('/api/admin/messages', {credentials:'same-origin', headers:{'X-CSRF': m.csrf}}).then(r=>r.json());"
+                "  for (const msg of (list.messages || [])) {"
+                "    if ((msg.name || '').includes('Test CDP')) {"
+                "      await fetch('/api/admin/messages/' + msg.id, {method:'DELETE', credentials:'same-origin', headers:{'X-CSRF': m.csrf}});"
+                "    }"
+                "  }"
+                "}).then(() => 'posprzątane')"
+            )
             cards = await ev("document.querySelectorAll('.a-card').length")
             print("panel: karty statystyk:", cards)
             await asyncio.sleep(0.8)

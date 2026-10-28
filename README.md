@@ -48,14 +48,17 @@ odpala serwer i otwiera przeglądarkę.
 
 - **Backend:** FastAPI + SQLite (WAL) + Pillow — zero zewnętrznych usług.
   `data/site.db`, zdjęcia w `data/photos/`, miniatury `data/thumbs/` (900 px),
-  wersje do lightboxa `data/large/` (2000 px). Oryginały zostają nietknięte
-  (przycisk POBIERZ w lightboxie daje oryginał).
+  wersje do lightboxa `data/large/` (2000 px). Wszystko generowane od razu
+  w **WebP + JPEG** (przeglądarka bierze WebP ~30% mniejszy, JPEG jako fallback).
+  Oryginały zostają nietknięte (przycisk POBIERZ w lightboxie daje oryginał).
 - **Frontend:** czyste SPA (bez frameworków) — `public/index.html`,
   `public/css/style.css`, `public/js/app.js` (strona) i `public/js/admin.js` (panel).
+  Atrybuty width/height na obrazkach = zero przeskoków layoutu (CLS) w galerii.
 - **Bezpieczeństwo:** hasło pbkdf2 (200k iteracji) z solą, sesja podpisana HMAC (7 dni),
   CSRF na wszystkich operacjach panelu, limit prób logowania, walidacja uploadu po
   magic bytes (nie po rozszerzeniu), sanitacja HTML w markdownie, honeypot w formularzu
-  kontaktowym.
+  kontaktowym, nagłówki OWASP (nosniff / X-Frame-Options / Referrer-Policy /
+  Permissions-Policy).
 - **Seed:** `seed.py` wypełnia bazę twoimi zdjęciami z pulpitu (albumy: *Stal i cegła*,
   *Rajd*, *Samochód taty*, *Codzienność*). Uruchom ponownie, aby zresetować zawartość
   do stanu startowego (uwaga: kasuje aktualne albumy).
@@ -72,6 +75,7 @@ odpala serwer i otwiera przeglądarkę.
    ```
 2. Nadaj prawa i odpal raz, żeby zbudowało `.venv`:
    ```bash
+   apt install -y python3-venv   # Debian/Ubuntu, jeśli brak
    chmod +x pf-portfolio/start.sh
    ./pf-portfolio/start.sh
    ```

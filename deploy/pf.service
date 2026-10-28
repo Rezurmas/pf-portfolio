@@ -10,6 +10,20 @@ ExecStart=/opt/pf-portfolio/start.sh
 Restart=always
 RestartSec=3
 TimeoutStopSec=30
+# hardening (systemd best practices) — /opt i data/ zostają zapisywalne,
+# więc uploady zdjęć i baza działają normalnie
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+LimitNOFILE=8192
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target

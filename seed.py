@@ -222,7 +222,6 @@ def main() -> None:
 
     conn.close()
     print("Seed OK.")
-    print("  albumy:", conn.execute if False else "")
     c = app.db()
     for row in c.execute(
         "SELECT a.title, COUNT(p.id) FROM albums a LEFT JOIN photos p ON p.album_id = a.id "

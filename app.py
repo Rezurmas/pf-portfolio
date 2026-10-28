@@ -21,6 +21,7 @@ import hmac
 import json
 import re
 import secrets
+import shutil
 import sqlite3
 import time
 import unicodedata
@@ -127,11 +128,16 @@ _RATE_WINDOW = 900  # 15 min
 def rate_check(request: Request, kind: str) -> None:
     ip = request.client.host if request.client else "?"
     now = time.time()
-    hits = [t for t in _RATE[kind + ":" + ip] if now - t < _RATE_WINDOW]
-    _RATE[kind + ":" + ip] = hits
+    key = kind + ":" + ip
+    hits = [t for t in _RATE.get(key, []) if now - t < _RATE_WINDOW]
+    _RATE[key] = hits
     if len(hits) >= _RATE_MAX[kind]:
         raise HTTPException(status_code=429, detail="Za dużo prób. Spróbuj później.")
-    _RATE[kind + ":" + ip].append(now)
+    _RATE[key].append(now)
+    # porządki: nie trzymaj kluczy starszych niż okno (publiczny serwer)
+    if len(_RATE) > 500:
+        for k in [k for k, v in _RATE.items() if not any(now - t < _RATE_WINDOW for t in v)]:
+            _RATE.pop(k, None)
 
 
 # -------------------------------------------------------------------- db --
@@ -461,8 +467,10 @@ def save_upload(album_id: int, file: UploadFile) -> int | None:
 
 
 def delete_photo_files(album_id: int, filename: str) -> None:
+    """Usuwa oryginał + miniaturę + wersje WebP (wszystkie trzy katalogi)."""
     for base in (PHOTOS, THUMBS, LARGE):
         (base / str(album_id) / filename).unlink(missing_ok=True)
+        (base / str(album_id) / (filename + ".webp")).unlink(missing_ok=True)
 
 
 # ------------------------------------------------------------ responses --
@@ -533,8 +541,7 @@ def api_site():
         "SELECT * FROM photos WHERE featured = 1 ORDER BY feat_pos, id LIMIT 12"
     ).fetchall()
     posts = conn.execute(
-        "SELECT p.*, "
-        "(SELECT COUNT(*) FROM photos) AS dummy FROM posts p "
+        "SELECT p.* FROM posts p "
         "WHERE published = 1 ORDER BY created_at DESC, id DESC LIMIT 6"
     ).fetchall()
     out_albums = []
@@ -794,21 +801,8 @@ def admin_delete_album(request: Request, album_id: int):
     conn.execute("DELETE FROM albums WHERE id = ?", (album_id,))
     conn.commit()
     conn.close()
-    import shutil
     for base in (PHOTOS, THUMBS, LARGE):
         shutil.rmtree(base / str(album_id), ignore_errors=True)
-    return {"ok": True}
-
-
-@app.post("/api/admin/albums/reorder")
-async def admin_reorder_albums(request: Request):
-    require_admin(request)
-    body = await request.json()
-    conn = db()
-    for i, aid in enumerate(body.get("ids", [])):
-        conn.execute("UPDATE albums SET position = ? WHERE id = ?", (i, int(aid)))
-    conn.commit()
-    conn.close()
     return {"ok": True}
 
 

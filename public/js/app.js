@@ -394,6 +394,14 @@ function splitHeroTitle() {
 
 /* ------------------------------------------------- lightbox -- */
 const LB = { photos: [], idx: 0, color: false };
+/* preload sąsiednich kadrów — strzałki nie czekają na sieć */
+const _preloadCache = new Map();
+function preloadPhoto(src) {
+  if (!src || _preloadCache.has(src)) return;
+  _preloadCache.set(src, 1);
+  const i = new Image();
+  i.src = src;
+}
 function closeLightbox() {
   $("#lightbox").classList.remove("open");
   document.body.style.overflow = "";
@@ -420,6 +428,8 @@ function initLightbox() {
   };
   const slide = (dir) => {
     if (LB.photos.length < 2) return;
+    const nxt = LB.photos[(LB.idx + dir + LB.photos.length) % LB.photos.length];
+    preloadPhoto(nxt.large_webp);
     lb.classList.add(dir < 0 ? "sliding-back" : "sliding");
     setTimeout(() => {
       LB.idx = (LB.idx + dir + LB.photos.length) % LB.photos.length;
@@ -465,6 +475,8 @@ function openLightbox(photos, idx) {
   img.src = photos[idx].large_webp;
   img.classList.remove("color");
   $("#lb-bw").classList.remove("on");
+  if (photos.length > 1) preloadPhoto(photos[(idx + 1) % photos.length].large_webp);
+  if (photos.length > 2) preloadPhoto(photos[(idx - 1 + photos.length) % photos.length].large_webp);
   $("#lb-title").textContent = photos[idx].title || "Bez tytułu";
   $("#lb-desc").textContent = photos[idx].description || "";
   $("#lb-count").textContent =
@@ -497,7 +509,7 @@ function initSearch() {
           ${r.posts.length ? `<div class="sr-group"><h4>Blog</h4>${r.posts.map((p) => `
             <a class="sr-item" href="/blog/${p.slug}" data-link>${esc(p.title)}<span class="sr-sub">${fmtDate(p.created_at)}</span></a>`).join("")}</div>` : ""}
           ${r.photos.length ? `<div class="sr-group"><h4>Zdjęcia</h4><div class="sr-photos">${r.photos.map((p) => `
-            <a href="/portfolio/${p.album_slug}" data-link><img src="${p.thumb}" alt="${esc(p.title)}" loading="lazy"></a>`).join("")}</div></div>` : ""}
+            <a href="/portfolio/${p.album_slug}" data-link>${pic(p.thumb_webp, p.thumb, p.title, `loading="lazy" decoding="async"`)}</a>`).join("")}</div></div>` : ""}
           ${!r.albums.length && !r.posts.length && !r.photos.length ? `<div class="label" style="margin-top:2rem">Brak wyników dla „${esc(q)}”</div>` : ""}
         `;
       } catch (e) { res.innerHTML = `<div class="label">${esc(e.message)}</div>`; }
@@ -539,10 +551,6 @@ function initContactForm() {
 }
 
 /* =================================================== widoki ===== */
-function heroNavSpace() {
-  return `<div class="wrap" style="padding-top:calc(76px + clamp(2.5rem,7vh,5rem))"></div>`;
-}
-
 async function renderHome() {
   const s = S.site;
   const hero = s.settings.hero || (s.featured[0] || null);
@@ -572,10 +580,9 @@ async function renderHome() {
   }).join("");
   return `
   <section class="hero">
-    <div class="hero-media">${heroImg ? `<img src="${heroImg}" alt="hero" fetchpriority="high">` : ""}</div>
+    <div class="hero-media">${heroImg ? pic(hero.large_webp, hero.large, "hero", `fetchpriority="high"`) : ""}</div>
     <div class="hero-top"><div class="wrap" style="display:flex;justify-content:space-between">
       <span class="label intro">${esc(s.settings.tagline || "Światło. Kadr.")}</span>
-      <span class="label intro" style="display:none">EST. 2026</span>
     </div></div>
     <div class="hero-inner wrap">
       <h1 class="hero-title" aria-label="${esc(title)}">
@@ -723,13 +730,13 @@ async function renderAlbum(slug) {
   catch { return render404("/portfolio/" + slug); }
   const { album, photos } = data;
   window.__albumPhotos = photos;
-  document.title = album.title + " — PF";
+  document.title = album.title + " — Dawid";
   const firstDate = photos[0] && photos[0].taken_at ? fmtDate(photos[0].taken_at) : fmtDate(album.created_at);
   return `
   <div class="wrap album-hero">
     <span class="label intro">Album / ${esc(album.title)}</span>
     <h1 class="h-display intro-2" style="margin-top:1.2rem">${esc(album.title)}</h1>
-    <p class="about-text intro-3" style="max-width:70ch;margin-top:1.6rem">${esc(album.description || "")}</p>
+    <p class="intro-3" style="max-width:70ch;margin-top:1.6rem">${esc(album.description || "")}</p>
     <div class="album-hero-meta intro-3">
       <span>Zdjęć: <span class="val">${album.photo_count}</span></span>
       <span>Data: <span class="val">${firstDate}</span></span>
@@ -778,7 +785,7 @@ async function renderPost(slug) {
   let data;
   try { data = await api("/api/posts/" + slug); } catch { return render404("/blog/" + slug); }
   const p = data.post;
-  document.title = p.title + " — PF";
+  document.title = p.title + " — Dawid";
   return `
   <div class="wrap post-hero">
     <span class="label intro">Blog / ${fmtDate(p.created_at)}</span>
@@ -787,7 +794,7 @@ async function renderPost(slug) {
       <span><a class="link-u" href="/blog" data-link>← Wszystkie wpisy</a></span>
       <div class="tags">${(p.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
     </div>
-    ${p.cover ? `<div class="post-cover intro-3"><img src="${p.cover.large}" alt="${esc(p.title)}"></div>` : ""}
+    ${p.cover ? `<div class="post-cover intro-3">${pic(p.cover.large_webp, p.cover.large, p.title, `decoding="async"`)}</div>` : ""}
   </div>
   <article class="wrap">
     <div class="prose intro-3">${md(p.content)}</div>
@@ -842,7 +849,7 @@ async function renderKontakt() {
 }
 
 async function render404() {
-  document.title = "404 — PF";
+  document.title = "404 — Dawid";
   return `
   <div class="wrap notfound">
     <span class="label">Błąd / Nie znaleziono</span>
@@ -874,7 +881,7 @@ function fillFooter(site) {
   const s = site.settings;
   $("#nav-brand").textContent = (s.site_title || "PF").split(/[—–-]/)[0].trim();
   $("#nav-brand-sub").textContent = "FOTO";
-  document.title = s.site_title + " — Fotografia";
+  document.title = s.site_title || "Dawid — Fotografia";
   $("#f-email").textContent = s.contact_email || "—";
   $("#f-phone").textContent = s.contact_phone || "—";
   $("#f-ig").textContent = s.contact_instagram ? "@" + s.contact_instagram.replace(/^@/, "") : "—";
@@ -907,7 +914,7 @@ async function boot() {
 
 /* albumy: lista zdjęć dla lightboxa (ustawiana w renderAlbum) */
 window.__albumPhotos = [];
-window.PF = { api, esc, toast, md, fmtDate, plCount, navigate, toast };
+window.PF = { api, esc, toast, md, fmtDate, plCount, navigate };
 window.PF.initReveals = initReveals;
 window.PF.buildMarquees = buildMarquees;
 window.PF.initContactForm = initContactForm;

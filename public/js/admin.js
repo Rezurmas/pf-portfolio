@@ -23,7 +23,6 @@
     featSizes: {},
     section: "dash",
     editing: { album: null, post: null },
-    uploads: [],
   };
 
   const $ = (s, r = document) => r.querySelector(s);
@@ -247,9 +246,9 @@
           <button class="mini" data-move="${p.id}" data-dir="1" title="W prawo">→</button>
         </div>
         <div class="ov-bot">
-          <button class="mini" data-edit-photo="${p.id}" title="Tytuł i opis">✎</button>
-          <button class="mini" data-cover="${p.id}" ${p.id === coverId ? "disabled style=opacity:.4" : ""} title="Ustaw jako okładkę">▣</button>
-          <button class="mini" data-del-photo="${p.id}" style="border-color:#f66" title="Usuń">✕</button>
+          <button class="mini" data-edit-photo="${p.id}" title="Tytuł i opis">OPIS</button>
+          <button class="mini" data-cover="${p.id}" ${p.id === coverId ? "disabled style=opacity:.4" : ""} title="Ustaw jako okładkę">OKŁ</button>
+          <button class="mini" data-del-photo="${p.id}" style="border-color:#f66" title="Usuń">USUŃ</button>
         </div>
       </div>
     </div>`).join("") || `<div class="a-row" style="grid-column:1/-1"><span class="s">Brak zdjęć — dodaj przez strefę powyżej.</span></div>`;
@@ -260,18 +259,7 @@
     <div class="a-head"><h1>Blog</h1>
       <button class="a-btn" id="a-new-post">+ Nowy wpis</button>
     </div>
-    <div class="a-list" id="posts-list">
-      ${A.posts.map((p) => `
-      <div class="a-row">
-        ${p.cover ? `<img class="thumb" src="${p.cover.thumb}" alt="">` : ""}
-        <div class="main"><span class="t">${esc(p.title)} ${p.published ? "" : '<span style="color:#777;font-size:.6em;letter-spacing:.2em">(SZKIC)</span>'}</span>
-          <span class="s">${fmtDate(p.created_at)} / ${(p.tags || []).join(", ")}</span></div>
-        <div class="a-actions">
-          <button class="a-btn mini" data-edit-post="${p.id}">Edytuj</button>
-          <button class="a-btn mini danger" data-del-post="${p.id}">Usuń</button>
-        </div>
-      </div>`).join("") || `<div class="a-row"><span class="s">Brak wpisów.</span></div>`}
-    </div>`;
+    <div class="a-list" id="posts-list">${postsListHTML()}</div>`;
   }
 
   function viewPostEditor(post) {
@@ -311,23 +299,38 @@
     </form>`;
   }
 
+  function postsListHTML() {
+    return A.posts.map((p) => `
+    <div class="a-row">
+      ${p.cover ? `<img class="thumb" src="${p.cover.thumb}" alt="">` : ""}
+      <div class="main"><span class="t">${esc(p.title)} ${p.published ? "" : '<span style="color:#777;font-size:.6em;letter-spacing:.2em">(SZKIC)</span>'}</span>
+        <span class="s">${fmtDate(p.created_at)} / ${(p.tags || []).join(", ")}</span></div>
+      <div class="a-actions">
+        <button class="a-btn mini" data-edit-post="${p.id}">Edytuj</button>
+        <button class="a-btn mini danger" data-del-post="${p.id}">Usuń</button>
+      </div>
+    </div>`).join("") || `<div class="a-row"><span class="s">Brak wpisów.</span></div>`;
+  }
+
+  function messagesListHTML() {
+    return A.messages.map((m) => `
+    <div class="msg ${m.read ? "" : "unread"}" data-mid="${m.id}">
+      <div class="msg-head" data-toggle-msg="${m.id}">
+        <span class="m-name">${esc(m.name || "Anonim")}</span>
+        <span class="m-meta">${esc(m.email || "")} / ${fmtDate(m.created_at)}</span>
+        <div class="a-actions">
+          <button class="a-btn mini ghost" data-toggle-read="${m.id}">${m.read ? "Oznacz nieprzeczytaną" : "Oznacz przeczytaną"}</button>
+          <button class="a-btn mini danger" data-del-msg="${m.id}">Usuń</button>
+        </div>
+      </div>
+      <div class="msg-body">${esc(m.message || "")}</div>
+    </div>`).join("") || `<div class="a-row"><span class="s">Skrzynka pusta.</span></div>`;
+  }
+
   function viewMessages() {
     return `
     <div class="a-head"><h1>Wiadomości</h1><span class="label">${A.messages.length} łącznie</span></div>
-    <div id="messages-list">
-      ${A.messages.map((m) => `
-      <div class="msg ${m.read ? "" : "unread"}" data-mid="${m.id}">
-        <div class="msg-head" data-toggle-msg="${m.id}">
-          <span class="m-name">${esc(m.name || "Anonim")}</span>
-          <span class="m-meta">${esc(m.email || "")} / ${fmtDate(m.created_at)}</span>
-          <div class="a-actions">
-            <button class="a-btn mini ghost" data-toggle-read="${m.id}">${m.read ? "Oznacz nieprzeczytaną" : "Oznacz przeczytaną"}</button>
-            <button class="a-btn mini danger" data-del-msg="${m.id}">Usuń</button>
-          </div>
-        </div>
-        <div class="msg-body">${esc(m.message || "")}</div>
-      </div>`).join("") || `<div class="a-row"><span class="s">Skrzynka pusta.</span></div>`}
-    </div>`;
+    <div id="messages-list">${messagesListHTML()}</div>`;
   }
 
   function viewSettings() {
@@ -367,7 +370,7 @@
   }
 
   /* -------------------------------------------------- picker -- */
-  function openPicker(targetInput, currentId, onPick) {
+  function openPicker(currentId, onPick) {
     if (!A.allPhotos.length) return toast("Brak zdjęć do wyboru", "err");
     const ov = document.createElement("div");
     ov.style.cssText = "position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.92);display:flex;flex-direction:column;padding:2rem";
@@ -446,7 +449,7 @@
         <span class="cover-tag">${idx + 1}</span>
         <img src="${p.thumb}" alt="" loading="lazy">
         <div class="ov" style="opacity:1"><div class="ov-bot">
-          <button class="mini" data-feat-rm="${id}" title="Usuń z wyróżnionych">✕ Usuń</button>
+          <button class="mini" data-feat-rm="${id}" title="Usuń z wyróżnionych">× USUŃ</button>
         </div></div>
       </div>`;
     }).join("");
@@ -850,7 +853,7 @@
     document.querySelector("[data-back-blog]")?.addEventListener("click", () => go("blog"));
     $("#pick-cover")?.addEventListener("click", () => {
       const cur = Number(form.elements.cover_id.value) || 0;
-      openPicker(null, cur, (id) => {
+      openPicker(cur, (id) => {
         form.elements.cover_id.value = id;
         const p = A.allPhotos.find((x) => x.id === id);
         $("#cover-chosen").innerHTML = p ? `<img src="${p.thumb}" style="width:110px;border:1px solid var(--line)">` : "";
@@ -918,7 +921,7 @@
     });
     $("#pick-hero")?.addEventListener("click", () => {
       const cur = Number($("#settings-form").elements.hero_photo_id.value) || 0;
-      openPicker(null, cur, (id) => {
+      openPicker(cur, (id) => {
         $("#settings-form").elements.hero_photo_id.value = id;
         toast("Hero wybrane — zapisz ustawienia");
       });
@@ -979,16 +982,7 @@
       const r = await api("/api/admin/posts");
       A.posts = r.posts;
       const el = $("#posts-list");
-      if (el) el.innerHTML = A.posts.map((p) => `
-      <div class="a-row">
-        ${p.cover ? `<img class="thumb" src="${p.cover.thumb}" alt="">` : ""}
-        <div class="main"><span class="t">${esc(p.title)} ${p.published ? "" : '<span style="color:#777;font-size:.6em;letter-spacing:.2em">(SZKIC)</span>'}</span>
-          <span class="s">${fmtDate(p.created_at)} / ${(p.tags || []).join(", ")}</span></div>
-        <div class="a-actions">
-          <button class="a-btn mini" data-edit-post="${p.id}">Edytuj</button>
-          <button class="a-btn mini danger" data-del-post="${p.id}">Usuń</button>
-        </div>
-      </div>`).join("") || `<div class="a-row"><span class="s">Brak wpisów.</span></div>`;
+      if (el) el.innerHTML = postsListHTML();
     } catch (err) { toast(err.message, "err"); }
   }
 
@@ -1014,18 +1008,7 @@
       const r = await api("/api/admin/messages");
       A.messages = r.messages;
       const el = $("#messages-list");
-      if (el) el.innerHTML = r.messages.map((m) => `
-      <div class="msg ${m.read ? "" : "unread"}" data-mid="${m.id}">
-        <div class="msg-head" data-toggle-msg="${m.id}">
-          <span class="m-name">${esc(m.name || "Anonim")}</span>
-          <span class="m-meta">${esc(m.email || "")} / ${fmtDate(m.created_at)}</span>
-          <div class="a-actions">
-            <button class="a-btn mini ghost" data-toggle-read="${m.id}">${m.read ? "Oznacz nieprzeczytaną" : "Oznacz przeczytaną"}</button>
-            <button class="a-btn mini danger" data-del-msg="${m.id}">Usuń</button>
-          </div>
-        </div>
-        <div class="msg-body">${esc(m.message || "")}</div>
-      </div>`).join("") || `<div class="a-row"><span class="s">Skrzynka pusta.</span></div>`;
+      if (el) el.innerHTML = messagesListHTML();
     } catch (err) { toast(err.message, "err"); }
   }
 
