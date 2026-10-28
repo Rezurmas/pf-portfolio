@@ -39,7 +39,9 @@ def add_photo(conn, album_id: int, src: Path, title: str = "", description: str 
     if img.mode not in ("RGB", "L"):
         img = img.convert("RGB")
     img.thumbnail((app.THUMB_SIZE, app.THUMB_SIZE))
+    tw, th = img.size
     img.save(tdir / name, "JPEG", quality=85)
+    img.save(tdir / (name + ".webp"), "WEBP", quality=82)
 
     img2 = Image.open(dest)
     img2 = ImageOps.exif_transpose(img2)
@@ -47,12 +49,13 @@ def add_photo(conn, album_id: int, src: Path, title: str = "", description: str 
         img2 = img2.convert("RGB")
     img2.thumbnail((app.LARGE_SIZE, app.LARGE_SIZE))
     img2.save(ldir / name, "JPEG", quality=90)
+    img2.save(ldir / (name + ".webp"), "WEBP", quality=88)
 
     pos = app.next_position(conn, "photos", "album_id = ?", (album_id,))
     cur = conn.execute(
-        "INSERT INTO photos (album_id, filename, title, description, position, taken_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (album_id, name, title, description, pos, taken),
+        "INSERT INTO photos (album_id, filename, title, description, position, taken_at, tw, th) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (album_id, name, title, description, pos, taken, tw, th),
     )
     if not conn.execute(
         "SELECT cover_id FROM albums WHERE id = ?", (album_id,)

@@ -19,6 +19,15 @@ function fmtDate(s) {
   return m ? `${m[3]}.${m[2]}.${m[1]}` : String(s);
 }
 
+/* obrazek z WebP (fallback JPEG) + atrybuty wymiarów (zero CLS) */
+function pic(webp, fallback, alt = "", extra = "") {
+  return `<picture><source srcset="${webp}" type="image/webp"><img src="${fallback}" alt="${esc(alt)}" ${extra}></picture>`;
+}
+
+function dims(p) {
+  return p.tw && p.th ? `width="${p.tw}" height="${p.th}" ` : "";
+}
+
 function plCount(n, one, few, many) {
   n = Number(n) || 0;
   if (n === 1) return `${n} ${one}`;
@@ -395,7 +404,12 @@ function initLightbox() {
   lb.dataset.ready = "1";
   const show = () => {
     const p = LB.photos[LB.idx];
-    img.src = p.large;
+    img.onerror = () => {
+      const fb = img.dataset.fallback;
+      if (fb && img.getAttribute("src") !== fb) img.src = fb;
+    };
+    img.dataset.fallback = p.large;
+    img.src = p.large_webp;
     img.alt = p.title || "zdjęcie";
     img.classList.toggle("color", LB.color);
     $("#lb-title").textContent = p.title || "Bez tytułu";
@@ -442,8 +456,14 @@ function openLightbox(photos, idx) {
   const lb = $("#lightbox");
   lb.classList.add("open");
   document.body.style.overflow = "hidden";
-  $("#lb-img").src = photos[idx].large;
-  $("#lb-img").classList.remove("color");
+  const img = $("#lb-img");
+  img.onerror = () => {
+    const fb = img.dataset.fallback;
+    if (fb && img.getAttribute("src") !== fb) img.src = fb;
+  };
+  img.dataset.fallback = photos[idx].large;
+  img.src = photos[idx].large_webp;
+  img.classList.remove("color");
   $("#lb-bw").classList.remove("on");
   $("#lb-title").textContent = photos[idx].title || "Bez tytułu";
   $("#lb-desc").textContent = photos[idx].description || "";
@@ -547,7 +567,7 @@ async function renderHome() {
     const sz = p.feat_size || (featured.length === 1 ? "full" : i === 0 || i === 1 ? "wide" : i === 5 ? "full" : "std");
     cls.push(sz);
     return `<a class="${cls.join(" ")}" href="/portfolio/${p.album_slug}" data-link data-reveal="scale" data-cursor>
-      <img src="${p.large}" alt="${esc(p.title)}" loading="lazy">
+      ${pic(p.large_webp, p.large, p.title, dims(p) + `loading="lazy" decoding="async"`)}
       <span class="fcap">${esc(p.title || "kadr")}</span></a>`;
   }).join("");
   return `
@@ -624,7 +644,7 @@ async function renderHome() {
       ${albums.map((a, i) => `
       <a class="album-row ${a.featured ? "feat " : ""}${i % 2 ? "flip" : ""}" href="/portfolio/${a.slug}" data-link data-reveal="up">
         <div class="album-cover">
-          ${a.cover ? `<img src="${a.cover.thumb}" alt="${esc(a.title)}" loading="lazy">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#999;letter-spacing:.3em">BRAK ZDJĘĆ</div>`}
+          ${a.cover ? pic(a.cover.thumb_webp, a.cover.thumb, a.title, dims(a.cover) + `loading="lazy" decoding="async"`) : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#999;letter-spacing:.3em">BRAK ZDJĘĆ</div>`}
           <span class="idx">${String(i + 1).padStart(2, "0")}</span>
         </div>
         <div class="album-info">
@@ -678,7 +698,7 @@ async function renderPortfolio() {
       ${albums.length ? albums.map((a, i) => `
       <a class="album-row ${a.featured ? "feat " : ""}${i % 2 ? "flip" : ""}" href="/portfolio/${a.slug}" data-link data-reveal="up">
         <div class="album-cover">
-          ${a.cover ? `<img src="${a.cover.thumb}" alt="${esc(a.title)}" loading="lazy">` : ""}
+          ${a.cover ? pic(a.cover.thumb_webp, a.cover.thumb, a.title, dims(a.cover) + `loading="lazy" decoding="async"`) : ""}
           <span class="idx">${String(i + 1).padStart(2, "0")}</span>
         </div>
         <div class="album-info">
@@ -721,7 +741,7 @@ async function renderAlbum(slug) {
       <div class="masonry" data-stagger>
         ${photos.map((p, i) => `
         <figure class="mcell" data-reveal="up" data-cursor data-lb="${i}">
-          <img src="${p.thumb}" alt="${esc(p.title || "zdjęcie")}" loading="${i < 6 ? "eager" : "lazy"}">
+          ${pic(p.thumb_webp, p.thumb, p.title || "zdjęcie", dims(p) + `loading="${i < 6 ? "eager" : "lazy"}" decoding="async"`)}
           ${p.title || p.description ? `<figcaption class="mcap">${esc(p.title || "")}${p.description ? `<span class="sub">${esc(p.description)}</span>` : ""}</figcaption>` : ""}
         </figure>`).join("")}
       </div>

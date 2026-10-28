@@ -222,6 +222,21 @@ def init_db() -> None:
         conn.execute("ALTER TABLE photos ADD COLUMN feat_pos INTEGER DEFAULT 0")
     if "feat_size" not in photo_cols:
         conn.execute("ALTER TABLE photos ADD COLUMN feat_size TEXT DEFAULT ''")
+    if "tw" not in photo_cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN tw INTEGER DEFAULT 0")
+    if "th" not in photo_cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN th INTEGER DEFAULT 0")
+    conn.commit()
+    # backfill wymiarów miniatur (CLS: atrybuty width/height w galerii)
+    for r in conn.execute("SELECT id, album_id, filename FROM photos WHERE tw = 0 OR th = 0").fetchall():
+        tp = THUMBS / str(r["album_id"]) / r["filename"]
+        if tp.exists():
+            try:
+                with Image.open(tp) as im:
+                    w, h = im.size
+                conn.execute("UPDATE photos SET tw = ?, th = ? WHERE id = ?", (w, h, r["id"]))
+            except Exception:
+                pass
     conn.commit()
     # jednorazowe wypełnienie: jeśli nic nie wyróżnione, weź pierwsze zdjęcia
     # z wyróżnionych albumów (kolejność: albumy → zdjęcia)
@@ -301,13 +316,20 @@ def next_position(conn: sqlite3.Connection, table: str, where: str, args: tuple)
 def photo_paths(photo: sqlite3.Row | dict) -> dict:
     album_id, filename = photo["album_id"], photo["filename"]
     orig_file = PHOTOS / str(album_id) / filename
+    base = f"/{album_id}/{filename}"
+    webp_thumb = (THUMBS / str(album_id) / (filename + ".webp")).exists()
+    webp_large = (LARGE / str(album_id) / (filename + ".webp")).exists()
     return {
-        "original": f"/media/{album_id}/{filename}",
-        "large": f"/large/{album_id}/{filename}",
-        "thumb": f"/thumbs/{album_id}/{filename}",
+        "original": "/media" + base,
+        "large": "/large" + base,
+        "thumb": "/thumbs" + base,
+        "large_webp": "/large" + base + ".webp" if webp_large else "/large" + base,
+        "thumb_webp": "/thumbs" + base + ".webp" if webp_thumb else "/thumbs" + base,
+        "tw": photo.get("tw") or 0,
+        "th": photo.get("th") or 0,
         # download: oryginał, jeśli istnieje; w lekkiej paczce (bez oryginałów) — wersja large
-        "download": f"/media/{album_id}/{filename}" if orig_file.exists()
-        else f"/large/{album_id}/{filename}",
+        "download": "/media" + base if orig_file.exists()
+        else "/large" + base,
     }
 
 
@@ -406,23 +428,28 @@ def save_upload(album_id: int, file: UploadFile) -> int | None:
         if img.mode not in ("RGB", "L"):
             img = img.convert("RGB")
         img.thumbnail((THUMB_SIZE, THUMB_SIZE))
+        tw, th = img.size
         img.save(thumb_dir / name, "JPEG", quality=85)
+        img.save(thumb_dir / (name + ".webp"), "WEBP", quality=82)
         img2 = Image.open(dest)
         img2 = ImageOps.exif_transpose(img2)
         if img2.mode not in ("RGB", "L"):
             img2 = img2.convert("RGB")
         img2.thumbnail((LARGE_SIZE, LARGE_SIZE))
         img2.save(large_dir / name, "JPEG", quality=90)
+        img2.save(large_dir / (name + ".webp"), "WEBP", quality=88)
     except Exception:
-        for p in (dest, thumb_dir / name, large_dir / name):
+        for p in (dest, thumb_dir / name, large_dir / name,
+                  thumb_dir / (name + ".webp"), large_dir / (name + ".webp")):
             p.unlink(missing_ok=True)
         return None
 
     conn = db()
     pos = next_position(conn, "photos", "album_id = ?", (album_id,))
     cur = conn.execute(
-        "INSERT INTO photos (album_id, filename, position, taken_at) VALUES (?, ?, ?, ?)",
-        (album_id, name, pos, taken_at),
+        "INSERT INTO photos (album_id, filename, position, taken_at, tw, th) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (album_id, name, pos, taken_at, tw, th),
     )
     if not conn.execute("SELECT cover_id FROM albums WHERE id = ?", (album_id,)).fetchone()[
         "cover_id"
@@ -484,6 +511,17 @@ def post_dict(p: sqlite3.Row, cover: dict | None) -> dict:
 
 
 # ================================================================== API ==
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """OWASP: podstawowe nagłówki bezpieczeństwa dla kazdej odpowiedzi."""
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    return resp
+
+
 @app.get("/api/site")
 def api_site():
     conn = db()
