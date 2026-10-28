@@ -499,6 +499,9 @@ input, textarea, select { font-family: inherit; font-weight: 700; }
 .a-btn.ghost:hover { background: transparent; color: var(--fg); border-color: var(--fg); }
 .a-btn.danger { border-color: #fff; background: #000; color: #fff; }
 .a-btn.danger:hover { background: #fff; color: #000; }
+.a-btn.dirty { background: #fff; color: #000; border-color: #fff; }
+.a-btn.dirty:hover { background: #000; color: #fff; }
+.a-row[data-aid] { cursor: pointer; }
 .a-btn.mini { padding: 0.45em 0.8em; font-size: 0.66rem; letter-spacing: 0.16em; }
 .a-btn:disabled { opacity: 0.35; pointer-events: none; }
 

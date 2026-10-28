@@ -19,6 +19,7 @@
     allPhotos: [],
     featPhotos: [],
     featuredIds: [],
+    featSaved: null,
     section: "dash",
     editing: { album: null, post: null },
     uploads: [],
@@ -200,7 +201,6 @@
         <span class="s">${plCount(a.photo_count, "zdjęcie", "zdjęcia", "zdjęć")} / ${fmtDate(a.created_at)}</span>
       </div>
       <div class="a-actions">
-        <button class="a-btn mini" data-open-album="${a.id}">Otwórz</button>
         <button class="a-btn mini ghost" data-edit-album="${a.id}">Edytuj</button>
         <button class="a-btn mini danger" data-del-album="${a.id}">Usuń</button>
       </div>
@@ -422,6 +422,7 @@
   /* ------------------------------------------- wyroznione -- */
   function viewFeatured() {
     const sel = A.featuredIds || [];
+    const dirty = JSON.stringify(sel) !== (A.featSaved ?? JSON.stringify([]));
     const cell = (p, idx) => {
       const pos = A.featuredIds.indexOf(p.id);
       return `<div class="a-photo ${pos >= 0 ? "feat-sel" : ""}" data-feat-pid="${p.id}">
@@ -444,7 +445,7 @@
     return `
     <div class="a-head"><h1>Wyróżnione — „Wybrane prace”</h1>
       <div style="display:flex;gap:.7rem;flex-wrap:wrap">
-        <button class="a-btn" id="feat-save">Zapisz wybór</button>
+        <button class="a-btn ${dirty ? "dirty" : "ghost"}" id="feat-save">Zapisz wybór${dirty ? "" : " (bez zmian)"}</button>
         <button class="a-btn ghost" id="feat-clear">Wyczyść</button>
       </div>
     </div>
@@ -484,7 +485,9 @@
           method: "POST",
           body: JSON.stringify({ ids: A.featuredIds || [] }),
         });
+        A.featSaved = JSON.stringify(A.featuredIds || []);
         toast("Wybór zapisany — odśwież stronę główną");
+        renderFeaturedPanes();
       } catch (err) { toast(err.message, "err"); }
     });
     $("#feat-clear")?.addEventListener("click", () => {
@@ -550,6 +553,7 @@
         .filter((p) => p.featured)
         .sort((a, b) => (a.feat_pos ?? 0) - (b.feat_pos ?? 0))
         .map((p) => p.id);
+      A.featSaved = JSON.stringify(A.featuredIds);
       const pane = $('[data-pane="featured"]');
       if (pane) pane.innerHTML = viewFeatured();
       bindFeatured();
@@ -582,10 +586,8 @@
     });
     const list = $("#albums-list");
     list?.addEventListener("click", async (e) => {
-      const open = e.target.closest("[data-open-album]");
       const edit = e.target.closest("[data-edit-album]");
       const del = e.target.closest("[data-del-album]");
-      if (open) { await openAlbumEditor(Number(open.dataset.openAlbum)); return; }
       if (edit) {
         const a = A.albums.find((x) => x.id === Number(edit.dataset.editAlbum));
         if (a) { $("#album-create").style.display = "block"; form.elements.title.value = a.title; form.elements.description.value = a.description; form.elements.featured.checked = !!a.featured; form.dataset.editId = a.id; }
@@ -598,7 +600,11 @@
           toast("Album usunięty");
           await loadAlbums();
         } catch (err) { toast(err.message, "err"); }
+        return;
       }
+      // klik gdziekolwiek w wiersz otwiera edytor albumu
+      const row = e.target.closest(".a-row[data-aid]");
+      if (row) await openAlbumEditor(Number(row.dataset.aid));
     });
     form?.addEventListener("submit", async (e) => {
       if (form.dataset.editId) {

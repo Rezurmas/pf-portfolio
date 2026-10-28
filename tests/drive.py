@@ -222,8 +222,8 @@ async def main() -> None:
             await asyncio.sleep(0.6)
             await shot("10-admin-albums.jpg")
 
-            # otwórz edytor albumu
-            await ev("document.querySelector('[data-open-album]').click()")
+            # otwórz edytor albumu (klik w wiersz)
+            await ev("document.querySelector('#albums-list .a-row').click()")
             await wait_js("document.querySelector('#a-photo-grid .a-photo') !== null", label="edytor albumu ze zdjęciami")
             print("panel edytor zdjęć:", await ev("document.querySelectorAll('#a-photo-grid .a-photo').length"))
             await asyncio.sleep(0.8)
