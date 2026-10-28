@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PF — Portfolio Fotograficzne</title>
+  <meta name="description" content="Portfolio fotograficzne — albumy, blog, kontakt.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Crect x='6' y='6' width='20' height='20' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/css/style.css?v=3">
+</head>
+<body>
+
+  <!-- preloader -->
+  <div id="preloader" aria-hidden="true">
+    <div>
+      <div class="pre-big" id="pre-brand">FOTOGRAFIA</div>
+      <div class="label" style="margin-top:1em;color:#777">Ładowanie kadrów</div>
+    </div>
+    <div class="pre-count"><span id="pre-num">00</span></div>
+  </div>
+
+  <!-- wipe przejścia -->
+  <div id="wipe" aria-hidden="true"></div>
+
+  <!-- ziarno -->
+  <div id="grain" aria-hidden="true"></div>
+
+  <!-- kursor -->
+  <div id="cursor-dot" aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- pasek postępu -->
+  <div id="scroll-progress" aria-hidden="true"></div>
+
+  <!-- header -->
+  <header id="site-header">
+    <div class="nav-bar">
+      <a href="/" class="nav-logo" data-link><span id="nav-brand">PF</span><em> / </em><span id="nav-brand-sub">FOTO</span></a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="/" data-link><span class="n">01</span>Start</a></li>
+          <li><a href="/portfolio" data-link><span class="n">02</span>Portfolio</a></li>
+          <li><a href="/blog" data-link><span class="n">03</span>Blog</a></li>
+          <li><a href="/kontakt" data-link><span class="n">04</span>Kontakt</a></li>
+        </ul>
+      </nav>
+      <div class="nav-right">
+        <button class="nav-btn" id="nav-search" aria-label="Szukaj">Szukaj</button>
+        <a class="nav-btn link-u" href="/admin" data-link>Panel</a>
+        <button class="nav-burger" id="nav-burger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- menu mobilne -->
+  <nav id="mobile-menu" aria-label="Menu mobilne">
+    <a href="/" data-link style="transition-delay:.12s"><span class="n">01</span>Start</a>
+    <a href="/portfolio" data-link style="transition-delay:.2s"><span class="n">02</span>Portfolio</a>
+    <a href="/blog" data-link style="transition-delay:.28s"><span class="n">03</span>Blog</a>
+    <a href="/kontakt" data-link style="transition-delay:.36s"><span class="n">04</span>Kontakt</a>
+    <a href="/admin" data-link style="transition-delay:.44s"><span class="n">05</span>Panel</a>
+  </nav>
+
+  <!-- widok -->
+  <main id="view"></main>
+
+  <!-- footer -->
+  <footer id="site-footer" hidden>
+    <div class="footer-grid">
+      <div class="footer-cell">
+        <h4>Nawigacja</h4>
+        <ul>
+          <li><a href="/" data-link class="link-u">Start</a></li>
+          <li><a href="/portfolio" data-link class="link-u">Portfolio</a></li>
+          <li><a href="/blog" data-link class="link-u">Blog</a></li>
+          <li><a href="/kontakt" data-link class="link-u">Kontakt</a></li>
+        </ul>
+      </div>
+      <div class="footer-cell">
+        <h4>Kontakt</h4>
+        <ul>
+          <li id="f-email">—</li>
+          <li id="f-phone">—</li>
+          <li id="f-ig">—</li>
+        </ul>
+      </div>
+      <div class="footer-cell">
+        <h4>Info</h4>
+        <ul>
+          <li id="f-text">—</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bar">
+      <span id="f-copy">© 2026</span>
+      <span>Wszystkie kadry zastrzeżone</span>
+    </div>
+  </footer>
+
+  <!-- lightbox -->
+  <div id="lightbox" role="dialog" aria-label="Podgląd zdjęcia">
+    <div class="lb-stage">
+      <button class="lb-arrow lb-prev" id="lb-prev" aria-label="Poprzednie">‹</button>
+      <img class="lb-img" id="lb-img" alt="">
+      <button class="lb-arrow lb-next" id="lb-next" aria-label="Następne">›</button>
+    </div>
+    <div class="lb-bar">
+      <div class="lb-cap">
+        <span id="lb-title">—</span>
+        <span class="sub" id="lb-desc"></span>
+      </div>
+      <span class="lb-count" id="lb-count">01 / 01</span>
+      <div class="lb-tools">
+        <button id="lb-bw" aria-label="Przełącz kolor">B/W</button>
+        <a id="lb-dl" download target="_blank" rel="noopener">Pobierz</a>
+        <button id="lb-close" aria-label="Zamknij">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- search -->
+  <div id="search-overlay" role="dialog" aria-label="Szukaj">
+    <div class="s-top">
+      <div style="flex:1;min-width:0">
+        <div class="label" style="margin-bottom:1.2em">Wyszukiwanie / Ctrl+K</div>
+        <input id="search-input" type="text" placeholder="SZUKAJ…" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="lb-arrow" id="search-close" aria-label="Zamknij" style="position:static;transform:none">✕</button>
+    </div>
+    <div id="search-results"></div>
+  </div>
+
+  <!-- toasty -->
+  <div id="toasts"></div>
+
+  <script src="/static/js/app.js?v=3"></script>
+  <script src="/static/js/admin.js?v=3"></script>
+</body>
+</html>

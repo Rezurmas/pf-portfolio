@@ -1,0 +1,8 @@
+.venv/
+data/
+dist/
+tests/shots/
+tests/chrome-profile/
+server.log
+__pycache__/
+*.pyc

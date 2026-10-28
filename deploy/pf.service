@@ -1,0 +1,15 @@
+[Unit]
+Description=PF Foto Portfolio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/pf-portfolio
+ExecStart=/opt/pf-portfolio/start.sh
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
