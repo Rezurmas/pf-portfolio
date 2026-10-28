@@ -214,6 +214,26 @@ def init_db() -> None:
     }
     for key, value in defaults.items():
         conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, value))
+    # migracja: kolumny wyróżnień zdjęć (sekcja "Wybrane prace")
+    photo_cols = [r["name"] for r in conn.execute("PRAGMA table_info(photos)").fetchall()]
+    if "featured" not in photo_cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN featured INTEGER DEFAULT 0")
+    if "feat_pos" not in photo_cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN feat_pos INTEGER DEFAULT 0")
+    conn.commit()
+    # jednorazowe wypełnienie: jeśli nic nie wyróżnione, weź pierwsze zdjęcia
+    # z wyróżnionych albumów (kolejność: albumy → zdjęcia)
+    n_feat = conn.execute("SELECT COUNT(*) FROM photos WHERE featured = 1").fetchone()[0]
+    if n_feat == 0:
+        rows = conn.execute(
+            "SELECT p.id FROM photos p JOIN albums a ON a.id = p.album_id "
+            "WHERE a.featured = 1 ORDER BY a.position, p.position, p.id LIMIT 6"
+        ).fetchall()
+        for i, r in enumerate(rows):
+            conn.execute(
+                "UPDATE photos SET featured = 1, feat_pos = ? WHERE id = ?", (i, r["id"])
+            )
+        conn.commit()
     conn.commit()
     conn.close()
 
@@ -470,9 +490,7 @@ def api_site():
         "FROM albums a ORDER BY a.position, a.id"
     ).fetchall()
     featured = conn.execute(
-        "SELECT * FROM photos WHERE album_id IN "
-        "(SELECT id FROM albums WHERE featured = 1) "
-        "ORDER BY position LIMIT 12"
+        "SELECT * FROM photos WHERE featured = 1 ORDER BY feat_pos, id LIMIT 12"
     ).fetchall()
     posts = conn.execute(
         "SELECT p.*, "
@@ -855,6 +873,42 @@ def admin_all_photos(request: Request):
         out.append(d)
     conn.close()
     return {"photos": out}
+
+
+@app.get("/api/admin/featured")
+def admin_featured(request: Request):
+    """Wszystkie zdjęcia + które są wyróżnione (sekcja "Wybrane prace")."""
+    require_admin(request)
+    conn = db()
+    rows = conn.execute(
+        "SELECT p.*, a.slug AS album_slug FROM photos p "
+        "JOIN albums a ON a.id = p.album_id "
+        "ORDER BY p.feat_pos, p.id LIMIT 800"
+    ).fetchall()
+    out = []
+    for p in rows:
+        d = dict(p)
+        d.update(photo_paths(d))
+        out.append(d)
+    conn.close()
+    return {"photos": out}
+
+
+@app.post("/api/admin/featured")
+async def admin_set_featured(request: Request):
+    """Ustaw dokładną listę i kolejność wyróżnionych zdjęć (max 12)."""
+    require_admin(request)
+    body = await request.json()
+    ids = [int(x) for x in body.get("ids", [])][:12]
+    conn = db()
+    conn.execute("UPDATE photos SET featured = 0, feat_pos = 0")
+    for i, pid in enumerate(ids):
+        conn.execute(
+            "UPDATE photos SET featured = 1, feat_pos = ? WHERE id = ?", (i, pid)
+        )
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 
 @app.post("/api/admin/posts")

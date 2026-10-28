@@ -624,7 +624,7 @@ async function renderHome() {
         <h2 class="h-display" data-reveal="up">Albumy</h2>
       </div>
       ${albums.map((a, i) => `
-      <a class="album-row ${i % 2 ? "flip" : ""}" href="/portfolio/${a.slug}" data-link data-reveal="up">
+      <a class="album-row ${a.featured ? "feat " : ""}${i % 2 ? "flip" : ""}" href="/portfolio/${a.slug}" data-link data-reveal="up">
         <div class="album-cover">
           ${a.cover ? `<img src="${a.cover.thumb}" alt="${esc(a.title)}" loading="lazy">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#999;letter-spacing:.3em">BRAK ZDJĘĆ</div>`}
           <span class="idx">${String(i + 1).padStart(2, "0")}</span>
@@ -678,7 +678,7 @@ async function renderPortfolio() {
   <section class="sec" data-stagger style="padding-top:clamp(2rem,5vw,4rem)">
     <div class="wrap">
       ${albums.length ? albums.map((a, i) => `
-      <a class="album-row ${i % 2 ? "flip" : ""}" href="/portfolio/${a.slug}" data-link data-reveal="up">
+      <a class="album-row ${a.featured ? "feat " : ""}${i % 2 ? "flip" : ""}" href="/portfolio/${a.slug}" data-link data-reveal="up">
         <div class="album-cover">
           ${a.cover ? `<img src="${a.cover.thumb}" alt="${esc(a.title)}" loading="lazy">` : ""}
           <span class="idx">${String(i + 1).padStart(2, "0")}</span>

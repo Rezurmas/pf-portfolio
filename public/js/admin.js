@@ -17,6 +17,8 @@
     messages: [],
     settings: null,
     allPhotos: [],
+    featPhotos: [],
+    featuredIds: [],
     section: "dash",
     editing: { album: null, post: null },
     uploads: [],
@@ -60,6 +62,7 @@
         <nav class="a-nav">
           ${navItem("dash", "Pulpit")}
           ${navItem("albums", "Albumy")}
+          ${navItem("featured", "Wyróżnione")}
           ${navItem("blog", "Blog")}
           ${navItem("messages", "Wiadomości", A.stats && A.stats.unread ? A.stats.unread : "")}
           ${navItem("settings", "Ustawienia")}
@@ -72,6 +75,7 @@
       <main class="a-main">
         <section class="a-section ${A.section === "dash" ? "active" : ""}" data-pane="dash">${viewDash()}</section>
         <section class="a-section ${A.section === "albums" ? "active" : ""}" data-pane="albums">${viewAlbums()}</section>
+        <section class="a-section ${A.section === "featured" ? "active" : ""}" data-pane="featured">${viewFeatured()}</section>
         <section class="a-section ${A.section === "blog" ? "active" : ""}" data-pane="blog">${viewBlog()}</section>
         <section class="a-section ${A.section === "messages" ? "active" : ""}" data-pane="messages">${viewMessages()}</section>
         <section class="a-section ${A.section === "settings" ? "active" : ""}" data-pane="settings">${viewSettings()}</section>
@@ -88,6 +92,7 @@
     bindShell();
     if (section === "dash") loadStats();
     if (section === "albums") loadAlbums();
+    if (section === "featured") loadFeatured();
     if (section === "blog") loadPosts();
     if (section === "messages") loadMessages();
     if (section === "settings") loadSettings();
@@ -101,7 +106,7 @@
       A.me = null;
       renderLogin();
     });
-    bindDash(); bindAlbums(); bindBlog(); bindMessages(); bindSettings();
+    bindDash(); bindAlbums(); bindFeatured(); bindBlog(); bindMessages(); bindSettings();
   }
 
   /* -------------------------------------------------- login -- */
@@ -241,9 +246,9 @@
           <button class="mini" data-move="${p.id}" data-dir="1" title="W prawo">→</button>
         </div>
         <div class="ov-bot">
-          <button class="mini" data-edit-photo="${p.id}">Opis</button>
-          <button class="mini" data-cover="${p.id}" ${p.id === coverId ? "disabled style=opacity:.4" : ""}>Okładka</button>
-          <button class="mini" data-del-photo="${p.id}" style="border-color:#f66">Usuń</button>
+          <button class="mini" data-edit-photo="${p.id}" title="Tytuł i opis">✎</button>
+          <button class="mini" data-cover="${p.id}" ${p.id === coverId ? "disabled style=opacity:.4" : ""} title="Ustaw jako okładkę">▣</button>
+          <button class="mini" data-del-photo="${p.id}" style="border-color:#f66" title="Usuń">✕</button>
         </div>
       </div>
     </div>`).join("") || `<div class="a-row" style="grid-column:1/-1"><span class="s">Brak zdjęć — dodaj przez strefę powyżej.</span></div>`;
@@ -412,6 +417,94 @@
         loadAlbumEditor(A.editing.album);
       } catch (e) { toast(e.message, "err"); }
     });
+  }
+
+  /* ------------------------------------------- wyroznione -- */
+  function viewFeatured() {
+    const sel = A.featuredIds || [];
+    const cell = (p, idx) => {
+      const pos = A.featuredIds.indexOf(p.id);
+      return `<div class="a-photo ${pos >= 0 ? "feat-sel" : ""}" data-feat-pid="${p.id}">
+        ${pos >= 0 ? `<span class="cover-tag">${pos + 1}</span>` : ""}
+        <img src="${p.thumb}" alt="" loading="lazy">
+      </div>`;
+    };
+    const selCells = sel.map((id) => {
+      const p = (A.featPhotos || []).find((x) => x.id === id);
+      if (!p) return "";
+      const idx = sel.indexOf(id);
+      return `<div class="a-photo feat-sel" data-feat-pid="${id}">
+        <span class="cover-tag">${idx + 1}</span>
+        <img src="${p.thumb}" alt="" loading="lazy">
+        <div class="ov" style="opacity:1"><div class="ov-bot">
+          <button class="mini" data-feat-rm="${id}" title="Usuń z wyróżnionych">✕ Usuń</button>
+        </div></div>
+      </div>`;
+    }).join("");
+    return `
+    <div class="a-head"><h1>Wyróżnione — „Wybrane prace”</h1>
+      <div style="display:flex;gap:.7rem;flex-wrap:wrap">
+        <button class="a-btn" id="feat-save">Zapisz wybór</button>
+        <button class="a-btn ghost" id="feat-clear">Wyczyść</button>
+      </div>
+    </div>
+    <div class="label" style="margin-bottom:1rem">Wybrane: ${sel.length} / 12 — kliknij, aby usunąć</div>
+    <div class="a-photos" id="feat-selected">${selCells || '<div class="a-row" style="grid-column:1/-1"><span class="s">Nic nie wybrano.</span></div>'}</div>
+    <div class="label" style="margin:2.4rem 0 1rem">Wszystkie zdjęcia — kliknij, aby dodać (numer = kolejność)</div>
+    <div class="a-photos" id="feat-all">${(A.featPhotos || []).map((p) => cell(p)).join("")}</div>`;
+  }
+
+  function renderFeaturedPanes() {
+    const pane = $('[data-pane="featured"]');
+    if (pane) pane.innerHTML = viewFeatured();
+    bindFeatured();
+  }
+
+  function bindFeatured() {
+    $("#feat-all")?.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-feat-pid]");
+      if (!c) return;
+      const id = Number(c.dataset.featPid);
+      const sel = A.featuredIds || [];
+      const i = sel.indexOf(id);
+      if (i >= 0) sel.splice(i, 1);
+      else if (sel.length < 12) sel.push(id);
+      else { toast("Maksymalnie 12 zdjęć", "err"); return; }
+      renderFeaturedPanes();
+    });
+    $("#feat-selected")?.addEventListener("click", (e) => {
+      const rm = e.target.closest("[data-feat-rm]");
+      if (!rm) return;
+      A.featuredIds = (A.featuredIds || []).filter((x) => x !== Number(rm.dataset.featRm));
+      renderFeaturedPanes();
+    });
+    $("#feat-save")?.addEventListener("click", async () => {
+      try {
+        await api("/api/admin/featured", {
+          method: "POST",
+          body: JSON.stringify({ ids: A.featuredIds || [] }),
+        });
+        toast("Wybór zapisany — odśwież stronę główną");
+      } catch (err) { toast(err.message, "err"); }
+    });
+    $("#feat-clear")?.addEventListener("click", () => {
+      A.featuredIds = [];
+      renderFeaturedPanes();
+    });
+  }
+
+  async function loadFeatured() {
+    try {
+      const r = await api("/api/admin/featured");
+      A.featPhotos = r.photos;
+      A.featuredIds = r.photos
+        .filter((p) => p.featured)
+        .sort((a, b) => (a.feat_pos ?? 0) - (b.feat_pos ?? 0))
+        .map((p) => p.id);
+      const pane = $('[data-pane="featured"]');
+      if (pane) pane.innerHTML = viewFeatured();
+      bindFeatured();
+    } catch (err) { toast(err.message, "err"); }
   }
 
   /* -------------------------------------------------- bindings -- */
