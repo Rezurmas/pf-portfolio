@@ -30,11 +30,18 @@
 
 html { scroll-behavior: smooth; background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: pan-x pan-y; }
 
-/* dotyk: płynne przewijanie w każdym kontenerze scrollującym (iOS + Android) */
+/* dotyk: płynne przewijanie w kontenerach scrollujących (iOS + Android) */
 .a-nav, .a-nav.open, #feat-selected, #feat-all, .picker-grid, .md-preview,
 #search-results, .upload-queue, .a-main, #messages-list, .a-list, #feat-preview-grid {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+}
+/* contain TYLKO na osi, ktora sie scrolluje — gest w druga strone przechodzi na strone */
+#feat-selected, #feat-preview-grid { overscroll-behavior-x: contain; }
+.picker-grid, .md-preview, #search-results, .upload-queue, #messages-list { overscroll-behavior-y: contain; }
+.a-nav { overscroll-behavior-y: contain; }
+@media (max-width: 860px) {
+  /* otwarte menu panelu: jak sie nie scrolluje, gest ma przejsc na strone */
+  .a-nav.open { overscroll-behavior: auto; }
 }
 img { -webkit-touch-callout: none; -webkit-user-drag: none; }
 html.has-cursor, html.has-cursor a, html.has-cursor button, html.has-cursor input,
@@ -496,7 +503,7 @@ input::placeholder, textarea::placeholder { color: #555; }
 .a-side-foot { border-top: 1px solid var(--line); }
 .a-side-foot .a-nav-item { border-bottom: none; }
 
-.a-main { padding: clamp(1.5rem, 4vw, 3.5rem); overflow: hidden; }
+.a-main { padding: clamp(1.5rem, 4vw, 3.5rem); overflow: clip; }
 .a-section { display: none; }
 .a-section.active { display: block; animation: aSecIn 0.5s var(--ease); }
 @keyframes aSecIn { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
