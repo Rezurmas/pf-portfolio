@@ -672,6 +672,13 @@ input::placeholder, textarea::placeholder { color: #555; }
   .footer-grid { grid-template-columns: 1fr; }
   .a-form .row2 { grid-template-columns: 1fr; }
   .feature-grid .fcell { grid-column: span 6 !important; }
+  /* mozaika na telefonie: rowne kwadraty — koniec szarych pasow i pustych pol */
+  .feature-grid { background: transparent; }
+  .feature-grid .fcell { aspect-ratio: 1 / 1; outline: 1px solid var(--line); outline-offset: -1px; }
+  /* nieparzysta liczba zdjec: ostatni kafel szeroki, zamyka siatke bez dziury */
+  .feature-grid .fcell:last-child:nth-child(odd) { grid-column: 1 / -1 !important; aspect-ratio: 2 / 1; }
+  .fcell .fcap { bottom: 0.7em; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
+  .fcell::after { background: linear-gradient(0deg, rgba(0,0,0,.62), transparent 45%); }
   .stats-row { grid-template-columns: 1fr; }
   .hero-meta-row { flex-direction: column; gap: 1.4rem; align-items: flex-start; }
   /* szlif mobile: sekcje, hero, nawigacja, przyciski */
