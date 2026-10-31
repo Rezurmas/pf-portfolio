@@ -125,6 +125,7 @@
     A.root.innerHTML = `
     <div class="admin-login">
       <form class="login-card" id="login-form" autocomplete="off">
+        <a class="login-back" href="/" data-link>← Strona główna</a>
         <div class="lg-title">Panel admina</div>
         <div class="lg-sub">Zaloguj się, by zarządzać stroną</div>
         <div class="field">
