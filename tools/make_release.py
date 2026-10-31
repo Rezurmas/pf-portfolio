@@ -28,6 +28,8 @@ def build() -> None:
             for p in (BASE / d).rglob("*"):
                 if p.is_file() and "__pycache__" not in p.parts:
                     z.write(p, f"{NAME}/{p.relative_to(BASE)}")
+        # start.sh tez na gorze archiwum — pf.service wskazuje /opt/pf-portfolio/start.sh
+        z.write(BASE / "deploy" / "start.sh", f"{NAME}/start.sh")
         # baza + lekkie wersje zdjęć
         dbp = BASE / "data" / "site.db"
         if dbp.exists():
