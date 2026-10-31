@@ -58,8 +58,11 @@
     <div class="admin-shell">
       <aside class="a-side">
         <div class="a-side-head">
-          <span class="t">Dawid / Foto</span>
-          <span class="t" style="color:#777">Panel</span>
+          <a class="t a-home" href="/" data-link title="Wróć na stronę">Dawid / Foto</a>
+          <div class="a-side-head-right">
+            <span class="t" style="color:#777">Panel</span>
+            <button class="a-burger" id="a-burger" aria-label="Menu panelu"><span></span><span></span><span></span></button>
+          </div>
         </div>
         <nav class="a-nav">
           ${navItem("dash", "Pulpit")}
@@ -103,6 +106,11 @@
 
   function bindShell() {
     $$("[data-sec]").forEach((b) => b.addEventListener("click", () => go(b.dataset.sec)));
+    $("#a-burger")?.addEventListener("click", () => {
+      const nav = A.root.querySelector(".a-nav");
+      const open = nav.classList.toggle("open");
+      $("#a-burger").classList.toggle("open", open);
+    });
     $("#a-logout").addEventListener("click", async () => {
       try { await api("/api/logout", { method: "POST" }); } catch {}
       A.me = null;
